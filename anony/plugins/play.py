@@ -11,7 +11,7 @@ from anony.helpers import buttons, utils
 from anony.helpers._play import checkUB
 
 # ✨ PREMIUM UI SETTINGS
-IMG = "https://telegra.ph/file/af55d7879948408f65792.jpg"
+IMG = "https://kommodo.ai/i/4ejsPIm9mPj4hEx9PcnQ"
 DEV = "@aavyabots" # Tera credit yahan hai
 
 def playlist_to_queue(chat_id: int, tracks: list) -> str:
