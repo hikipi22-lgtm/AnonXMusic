@@ -16,12 +16,15 @@ class TgCall(PyTgCalls):
             video_parameters=types.VideoQuality.HD_720p,
         )
         
-        # UI Buttons
-        btns = InlineKeyboardMarkup([[
-            InlineKeyboardButton("⏸", callback_data=f"pause_{chat_id}"),
-            InlineKeyboardButton("▶️", callback_data=f"resume_{chat_id}"),
-            InlineKeyboardButton("⏭", callback_data=f"skip_{chat_id}"),
-        ]])
+        # 🔘 Control Buttons
+        btns = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("⏸", callback_data=f"pause_{chat_id}"),
+                InlineKeyboardButton("▶️", callback_data=f"resume_{chat_id}"),
+                InlineKeyboardButton("⏭", callback_data=f"skip_{chat_id}"),
+            ],
+            [InlineKeyboardButton("🗑 Cʟᴏsᴇ", callback_data="close")]
+        ])
 
         try:
             await client.play(chat_id, stream)
@@ -29,11 +32,9 @@ class TgCall(PyTgCalls):
                 duration_sec = media.duration_sec
                 played = 0
                 while played < duration_sec:
-                    # 🕒 Timer calculation
+                    # 🕒 Timer & Progress Bar
                     p_min, p_sec = divmod(played, 60)
-                    
-                    # 📊 Progress Bar Logic
-                    bar_fill = int((played / duration_sec) * 15)
+                    bar_fill = int((played / duration_sec) * 15) if duration_sec > 0 else 0
                     bar = "🔘" + "─" * bar_fill + "─" * (15 - bar_fill)
                     
                     text = (
@@ -44,14 +45,13 @@ class TgCall(PyTgCalls):
                         f"{bar}"
                     )
                     try:
+                        # 🖼️ Sending actual song thumbnail
                         await message.edit_media(
                             media=InputMediaPhoto(media=media.thumb, caption=text),
                             reply_markup=btns
                         )
-                    except:
-                        break # Stop loop if message deleted
-                    
-                    await asyncio.sleep(10) # 10 sec update interval
+                    except: break
+                    await asyncio.sleep(10)
                     played += 10
         except Exception as e:
             logger.error(f"Streaming Error: {e}")
@@ -62,4 +62,4 @@ class TgCall(PyTgCalls):
             client = PyTgCalls(ub)
             await client.start()
             self.clients.append(client)
-        logger.info("Bot started with Original UI & Timer!")
+        logger.info("Bot started with Full Original UI!")
