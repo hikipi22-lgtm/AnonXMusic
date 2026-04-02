@@ -4,15 +4,15 @@
 
 from pathlib import Path
 from pyrogram import filters, types
-from pyrogram.types import InputMediaPhoto # Naya import UI ke liye
+from pyrogram.types import InputMediaPhoto
 
 from anony import anon, app, config, db, lang, queue, tg, yt
 from anony.helpers import buttons, utils
 from anony.helpers._play import checkUB
 
-# ✨ PREMIUM UI SETTINGS
-IMG = "https://kommodo.ai/i/4ejsPIm9mPj4hEx9PcnQ"
-DEV = "@aavyabots" # Tera credit yahan hai
+# UI Settings
+IMG = "https://graph.org/file/f7033503b4ee3df594548.jpg"
+DEV = "@aavyabots"
 
 def playlist_to_queue(chat_id: int, tracks: list) -> str:
     text = "<blockquote expandable>"
@@ -37,10 +37,10 @@ async def play_hndlr(
     video: bool = False,
     url: str = None,
 ) -> None:
-    # 🖼️ SEARCHING UI START
+    # 🔍 Initial Photo UI
     sent = await m.reply_photo(
         photo=IMG,
-        caption=f"✨ **sᴇᴀʀᴄʜɪɴɢ ʏᴏᴜʀ sᴏɴɢ...**\n\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}"
+        caption=f"✨ **sᴇᴀʀᴄʜɪɴɢ...**\n\n👤 **ʙʏ:** {m.from_user.mention}\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}"
     )
     
     file = None
@@ -60,7 +60,7 @@ async def play_hndlr(
             await sent.edit_caption(f"✨ **ꜰᴇᴛᴄʜɪɴɢ ᴘʟᴀʏʟɪsᴛ...**\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}")
             tracks = await yt.playlist(config.PLAYLIST_LIMIT, mention, url, video)
             if not tracks:
-                return await sent.edit_caption("❌ **ᴘʟᴀʏʟɪsᴛ ɴᴏᴛ ꜰᴏᴜɴᴅ ᴏʀ ᴇʀʀᴏʀ!**")
+                return await sent.edit_caption("❌ **ᴘʟᴀʏʟɪsᴛ ᴇʀʀᴏʀ!**")
             file = tracks[0]
             tracks.remove(file)
             file.message_id = sent.id
@@ -72,10 +72,10 @@ async def play_hndlr(
         file = await yt.search(query, sent.id, video=video)
 
     if not file:
-        return await sent.edit_caption(f"❌ **sᴏɴɢ ɴᴏᴛ ꜰᴏᴜɴᴅ!**\n\n💬 **ᴛʀʏ ᴀɢᴀɪɴ ᴡɪᴛʜ ᴄᴏʀʀᴇᴄᴛ ɴᴀᴍᴇ.**\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}")
+        return await sent.edit_caption(f"❌ **sᴏɴɢ ɴᴏᴛ ꜰᴏᴜɴᴅ!**\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}")
 
     if file.duration_sec > config.DURATION_LIMIT:
-        return await sent.edit_caption(f"⚠️ **ᴅᴜʀᴀᴛɪᴏɴ ʟɪᴍɪᴛ ᴇxᴄᴇᴇᴅᴇᴅ!**\n\n🕒 **ᴍᴀx ᴀʟʟᴏᴡᴇᴅ:** `{config.DURATION_LIMIT // 60} ᴍɪɴs`")
+        return await sent.edit_caption(f"⚠️ **ʟɪᴍɪᴛ:** `{config.DURATION_LIMIT // 60} ᴍɪɴs`")
 
     file.user = mention
     if force:
@@ -83,11 +83,11 @@ async def play_hndlr(
     else:
         position = queue.add(m.chat.id, file)
         if position != 0 or await db.get_call(m.chat.id):
-            # 📝 QUEUED UI
+            # 📝 Queued UI with Mention
             cap = (
-                f"📝 **ᴀᴅᴅᴇᴅ ᴛᴏ ǫᴜᴇᴜᴇ ᴀᴛ #{position}**\n\n"
-                f"🎵 **ᴛɪᴛʟᴇ:** [{file.title}]({file.url})\n"
-                f"👤 **ʙʏ:** {mention}\n"
+                f"📝 **ᴀᴅᴅᴇᴅ ᴛᴏ ǫᴜᴇᴜᴇ #️⃣{position}**\n\n"
+                f"🎵 **ᴛɪᴛʟᴇ:** `{file.title}`\n"
+                f"👤 **ʀᴇǫᴜᴇsᴛᴇᴅ ʙʏ:** {mention}\n"
                 f"🕒 **ᴅᴜʀᴀᴛɪᴏɴ:** `{file.duration}`\n\n"
                 f"🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}"
             )
@@ -97,21 +97,19 @@ async def play_hndlr(
             )
             return
 
-    # 📥 DOWNLOADING UI
+    # 📥 Download UI with Real Time Line
     if not file.file_path:
         fname = f"downloads/{file.id}.{'mp4' if video else 'webm'}"
         if Path(fname).exists():
             file.file_path = fname
         else:
-            await sent.edit_caption(f"📥 **ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ꜰʀᴏᴍ ʏᴏᴜᴛᴜʙᴇ...**\n\n▶️ 🔘──────────────── 05:00\n🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}")
+            await sent.edit_caption(
+                f"📥 **ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ꜰʀᴏᴍ ʏᴏᴜᴛᴜʙᴇ...**\n\n"
+                f"🎵 **sᴏɴɢ:** `{file.title}`\n"
+                f"👤 **ᴘʟᴀʏᴇᴅ ʙʏ:** {mention}\n\n"
+                f"▶️ 🔘──────────────── {file.duration}\n"
+                f"🛡️ **ᴘᴏᴡᴇʀᴇᴅ ʙʏ:** {DEV}"
+            )
             file.file_path = await yt.download(file.id, video=video)
 
-    # 🚀 FINAL PLAY
     await anon.play_media(chat_id=m.chat.id, message=sent, media=file)
-    
-    if tracks:
-        added = playlist_to_queue(m.chat.id, tracks)
-        await app.send_message(
-            chat_id=m.chat.id,
-            text=f"✅ **{len(tracks)} ᴛʀᴀᴄᴋs ᴀᴅᴅᴇᴅ ᴛᴏ ǫᴜᴇᴜᴇ!**\n" + added,
-        )
