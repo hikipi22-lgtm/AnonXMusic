@@ -1,77 +1,48 @@
 # Copyright (c) 2025 AnonymousX1025
-# Licensed under the MIT License.
-# This file is part of AnonXMusic
-
 from pathlib import Path
 from pyrogram import filters, types
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from anony import anon, app, config, db, lang, queue, tg, yt
-from anony.helpers import buttons, utils
+from anony.helpers import utils
 from anony.helpers._play import checkUB
 
-def playlist_to_queue(chat_id: int, tracks: list) -> str:
-    text = "<blockquote expandable>"
-    for track in tracks:
-        pos = queue.add(chat_id, track)
-        text += f"<b>{pos}.</b> {track.title}\n"
-    text = text[:1948] + "</blockquote>"
-    return text
-
 @app.on_message(
-    filters.command(["play", "playforce", "vplay", "vplayforce"])
+    filters.command(["play", "vplay"])
     & filters.group
     & ~app.bl_users
 )
 @lang.language()
 @checkUB
-async def play_hndlr(_, m: types.Message, force: bool = False, m3u8: bool = False, video: bool = False, url: str = None):
-    # 🔍 Searching Text (Original)
-    sent = await m.reply_text(m.lang["play_searching"])
-    file = None
-    mention = m.from_user.mention
-    media = tg.get_media(m.reply_to_message) if m.reply_to_message else None
-    tracks = []
+async def play_hndlr(_, m: types.Message, video: bool = False):
+    # 🔍 Original Search Text
+    sent = await m.reply_text("🔍 **sᴇᴀʀᴄʜɪɴɢ...**")
+    
+    if len(m.command) < 2:
+        return await sent.edit_text("❌ **ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀ sᴏɴɢ ɴᴀᴍᴇ!**")
 
-    if media:
-        setattr(sent, "lang", m.lang)
-        file = await tg.download(m.reply_to_message, sent)
-    elif m3u8:
-        file = await tg.process_m3u8(url, sent.id, video)
-    elif url:
-        if "playlist" in url:
-            await sent.edit_text(m.lang["playlist_fetch"])
-            tracks = await yt.playlist(config.PLAYLIST_LIMIT, mention, url, video)
-            if not tracks:
-                return await sent.edit_text(m.lang["playlist_error"])
-            file = tracks[0]
-            tracks.remove(file)
-            file.message_id = sent.id
-        else:
-            file = await yt.search(url, sent.id, video=video)
-    elif len(m.command) >= 2:
-        query = " ".join(m.command[1:])
-        file = await yt.search(query, sent.id, video=video)
-
+    query = " ".join(m.command[1:])
+    file = await yt.search(query, sent.id, video=video)
+    
     if not file:
-        return await sent.edit_text(m.lang["play_not_found"].format(config.SUPPORT_CHAT))
+        return await sent.edit_text("❌ **sᴏɴɢ ɴᴏᴛ ꜰᴏᴜɴᴅ!**")
 
-    file.user = mention
-    if force:
-        queue.force_add(m.chat.id, file)
-    else:
-        position = queue.add(m.chat.id, file)
-        if position != 0 or await db.get_call(m.chat.id):
-            await sent.edit_text(
-                m.lang["play_queued"].format(position, file.url, file.title, file.duration, mention),
-                reply_markup=buttons.play_queued(m.chat.id, file.id, m.lang["play_now"]),
-            )
-            return
+    file.user = m.from_user.mention
+    position = queue.add(m.chat.id, file)
+
+    if position != 0 or await db.get_call(m.chat.id):
+        # 📝 Queue UI with Buttons
+        return await sent.edit_text(
+            f"📝 **ǫᴜᴇᴜᴇᴅ ᴀᴛ #{position}**\n\n🎵 **ᴛɪᴛʟᴇ:** `{file.title}`\n⏱️ **ᴅᴜʀᴀᴛɪᴏɴ:** `{file.duration}`",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🗑 Cʟᴏsᴇ", callback_data="close")
+            ]])
+        )
 
     if not file.file_path:
-        # 📥 Downloading Text (Original)
-        await sent.edit_text(m.lang["play_downloading"])
+        # 📥 Original Download Text
+        await sent.edit_text("📥 **ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...**")
         file.file_path = await yt.download(file.id, video=video)
 
-    # ⚠️ Block Check (If YouTube fails)
     if not file.file_path:
         return await sent.edit_text("❌ **ʏᴏᴜᴛᴜʙᴇ ʙʟᴏᴄᴋ!** ᴜᴘᴅᴀᴛᴇ ᴄᴏᴏᴋɪᴇs.")
 
