@@ -7,7 +7,7 @@ class Config:
     def __init__(self):
         self.API_ID = int(getenv("API_ID", 0))
         self.API_HASH = getenv("API_HASH")
-        self.MUSIC_BOT_TOKEN = getenv("BOT_TOKEN")
+        self.MUSIC_BOT_TOKEN = getenv("MUSIC_BOT_TOKEN")
         self.MONGO_URL = getenv("MONGO_URL")
         self.LOGGER_ID = int(getenv("LOGGER_ID", 0))
         self.OWNER_ID = int(getenv("OWNER_ID", 0))
